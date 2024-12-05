@@ -192,47 +192,75 @@ files are checked for proper spelling, and formatting at this time.
 Visit [this link](.github/third_party_tools.md) for detailed information about
 third-party tools with FreeRTOS support.
 
-# Steps
+# Fuzzing Steps
 
-1.  Install CBMC and FreeRTOS using `git` or `homebrew`.
-2.  `scheduler_example.c` file is used to simulate FreeRTOS scheduler behaviour
-3.  `FreeRTOSConfig.h` file is used to change config fo CBMC
-4.  `schedule_harness.c` file is used as a CBMC test case
-5.  Commands to run the CBMC example
-
-Compilation -
+## Stuck
 
 ```
-cbmc scheduler_example.c -I/path/to/FreeRTOS-Kernel/include \
-    -I/path/to/FreeRTOSConfig.h \
-    -D__CPROVER__ -o scheduler
+mkdir build
+cd build
+cmake -DFREERTOS_PORT=GCC_ARM_CM4F ..
+make
 ```
-
-> add -v for verbose errors/warnings
-
-Verification of Scheuler
+This is not able to build the kernel, getting the following error message on my machine
 
 ```
-cbmc scheduler --function CBMC_RunScheduler
+/tmp/ccM46PL2.s: Assembler messages:
+/tmp/ccM46PL2.s:77: Error: unknown or missing system register name at operand 1 -- `msr basepri,x0'
+/tmp/ccM46PL2.s:79: Error: missing immediate expression at operand 1 -- `dsb '
+/tmp/ccM46PL2.s:106: Error: expected a register at operand 1 -- `ldr r3,=pxCurrentTCB'
+/tmp/ccM46PL2.s:107: Error: expected a register at operand 1 -- `ldr r1,[r3]'
+/tmp/ccM46PL2.s:108: Error: expected a register at operand 1 -- `ldr r0,[r1]'
+/tmp/ccM46PL2.s:109: Error: unknown mnemonic `ldmia' -- `ldmia r0!,{r4-r11,r14}'
+/tmp/ccM46PL2.s:110: Error: unknown or missing system register name at operand 1 -- `msr psp,r0'
+/tmp/ccM46PL2.s:112: Error: expected a register or register list at operand 1 -- `mov r0,#0'
+/tmp/ccM46PL2.s:113: Error: unknown or missing system register name at operand 1 -- `msr basepri,r0'
+/tmp/ccM46PL2.s:114: Error: unknown mnemonic `bx' -- `bx r14'
+/tmp/ccM46PL2.s:132: Error: expected a register at operand 1 -- `ldr r0,=0xE000ED08'
+/tmp/ccM46PL2.s:133: Error: expected a register at operand 1 -- `ldr r0,[r0]'
+/tmp/ccM46PL2.s:134: Error: expected a register at operand 1 -- `ldr r0,[r0]'
+/tmp/ccM46PL2.s:135: Error: unknown or missing system register name at operand 1 -- `msr msp,r0'
+/tmp/ccM46PL2.s:136: Error: expected a register or register list at operand 1 -- `mov r0,#0'
+/tmp/ccM46PL2.s:137: Error: unknown or missing system register name at operand 1 -- `msr control,r0'
+/tmp/ccM46PL2.s:138: Error: unknown mnemonic `cpsie' -- `cpsie i'
+/tmp/ccM46PL2.s:139: Error: unknown mnemonic `cpsie' -- `cpsie f'
+/tmp/ccM46PL2.s:140: Error: missing immediate expression at operand 1 -- `dsb '
+/tmp/ccM46PL2.s:231: Error: unknown or missing system register name at operand 1 -- `msr basepri,x0'
+/tmp/ccM46PL2.s:233: Error: missing immediate expression at operand 1 -- `dsb '
+/tmp/ccM46PL2.s:277: Error: unknown or missing system register name at operand 1 -- `msr basepri,x0'
+/tmp/ccM46PL2.s:297: Error: expected an integer or zero register at operand 1 -- `mrs r0,psp'
+/tmp/ccM46PL2.s:300: Error: expected a register at operand 1 -- `ldr r3,=pxCurrentTCB'
+/tmp/ccM46PL2.s:301: Error: expected a register at operand 1 -- `ldr r2,[r3]'
+/tmp/ccM46PL2.s:303: Error: expected an integer or zero register at operand 1 -- `tst r14,#0x10'
+/tmp/ccM46PL2.s:304: Error: unknown mnemonic `it' -- `it eq'
+/tmp/ccM46PL2.s:305: Error: unknown mnemonic `vstmdbeq' -- `vstmdbeq r0!,{s16-s31}'
+/tmp/ccM46PL2.s:307: Error: unknown mnemonic `stmdb' -- `stmdb r0!,{r4-r11,r14}'
+/tmp/ccM46PL2.s:308: Error: expected a register at operand 1 -- `str r0,[r2]'
+/tmp/ccM46PL2.s:310: Error: unknown mnemonic `stmdb' -- `stmdb sp!,{r0,r3}'
+/tmp/ccM46PL2.s:311: Error: expected a register or register list at operand 1 -- `mov r0,0'
+/tmp/ccM46PL2.s:312: Error: unknown or missing system register name at operand 1 -- `msr basepri,r0'
+/tmp/ccM46PL2.s:313: Error: missing immediate expression at operand 1 -- `dsb '
+/tmp/ccM46PL2.s:316: Error: expected a register or register list at operand 1 -- `mov r0,#0'
+/tmp/ccM46PL2.s:317: Error: unknown or missing system register name at operand 1 -- `msr basepri,r0'
+/tmp/ccM46PL2.s:318: Error: unknown mnemonic `ldmia' -- `ldmia sp!,{r0,r3}'
+/tmp/ccM46PL2.s:320: Error: expected a register at operand 1 -- `ldr r1,[r3]'
+/tmp/ccM46PL2.s:321: Error: expected a register at operand 1 -- `ldr r0,[r1]'
+/tmp/ccM46PL2.s:323: Error: unknown mnemonic `ldmia' -- `ldmia r0!,{r4-r11,r14}'
+/tmp/ccM46PL2.s:325: Error: expected an integer or zero register at operand 1 -- `tst r14,#0x10'
+/tmp/ccM46PL2.s:326: Error: unknown mnemonic `it' -- `it eq'
+/tmp/ccM46PL2.s:327: Error: unknown mnemonic `vldmiaeq' -- `vldmiaeq r0!,{s16-s31}'
+/tmp/ccM46PL2.s:329: Error: unknown or missing system register name at operand 1 -- `msr psp,r0'
+/tmp/ccM46PL2.s:333: Error: unknown mnemonic `bx' -- `bx r14'
+/tmp/ccM46PL2.s:358: Error: unknown or missing system register name at operand 1 -- `msr basepri,x0'
+/tmp/ccM46PL2.s:360: Error: missing immediate expression at operand 1 -- `dsb '
+/tmp/ccM46PL2.s:378: Error: unknown or missing system register name at operand 1 -- `msr basepri,x0'
+/tmp/ccM46PL2.s:423: Error: unknown mnemonic `ldr.w' -- `ldr.w r0,=0xE000ED88'
+/tmp/ccM46PL2.s:424: Error: expected a register at operand 1 -- `ldr r1,[r0]'
+/tmp/ccM46PL2.s:426: Error: expected a register at operand 1 -- `orr r1,r1,#(0xf<<20)'
+/tmp/ccM46PL2.s:427: Error: expected a register at operand 1 -- `str r1,[r0]'
+/tmp/ccM46PL2.s:428: Error: unknown mnemonic `bx' -- `bx r14'
+make[2]: *** [portable/CMakeFiles/freertos_kernel_port.dir/build.make:76: portable/CMakeFiles/freertos_kernel_port.dir/GCC/ARM_CM4F/port.c.o] Error 1
+make[1]: *** [CMakeFiles/Makefile2:144: portable/CMakeFiles/freertos_kernel_port.dir/all] Error 2
+make: *** [Makefile:91: all] Error 2
 ```
-
-Command which worked (this has all the configs for the FreeRTOS Config, keeping it as simple in the beginning)
-
-Use -D to Define Missing Macros
-
-```
-cbmc scheduler_example.c \
-    -I "/Users/shivamshekhar/Desktop/FreeRTOS-Kernel/include" \
-    -I "/Users/shivamshekhar/Desktop/FreeRTOS-Kernel/portable/GCC/ARM_CM4F" \
-    -DconfigUSE_IDLE_HOOK=0 \
-    -DconfigUSE_TICK_HOOK=0 \
-    -DconfigMAX_SYSCALL_INTERRUPT_PRIORITY=0 \
-    -DconfigKERNEL_INTERRUPT_PRIORITY=0 \
-    -DconfigPRIO_BITS=3 \
-    --function CBMC_RunScheduler
-```
-
-6. `include` directory has all the header files
-7. For Silicon based mac we use `GCC/ARM_CM4F` compiler
-8. We can use `--show-symbol-tables` flag to check available functions
-9. We can use `--preprocess` flag to ensure the function is included in the preprocessed output
+It seems like its a build target issue? but I am not entirely sure..

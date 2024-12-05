@@ -4,3 +4,4 @@
 #define configMINIMAL_STACK_SIZE 128
 #define configTOTAL_HEAP_SIZE (10 * 1024)
 #define configTICK_RATE_HZ 1000
+#define configSYSTICK_CLOCK_HZ ( ( unsigned long ) 24000000 )

@@ -5,7 +5,29 @@ cmake_minimum_required(VERSION 3.15)
 #
 # User is responsible for one library target:
 #   freertos_config ,typically an INTERFACE library
-#
+
+# Define the freertos_config target
+add_library(freertos_config INTERFACE)
+
+# Specify the include directory for FreeRTOSConfig.h
+target_include_directories(freertos_config
+    INTERFACE
+    config/FreeRTOSConfig.h  # Replace with the actual path to FreeRTOSConfig.h
+)
+
+target_compile_definitions(freertos_config
+    INTERFACE
+    projCONVERAGE_TEST=0
+) 
+
+
+add_compile_definitions(configUSE_IDLE_HOOK=0)
+add_compile_definitions(configUSE_TICK_HOOK=0)
+add_compile_definitions(configMAX_SYSCALL_INTERRUPT_PRIORITY=0)
+add_compile_definitions(configKERNEL_INTERRUPT_PRIORITY=0)
+add_compile_definitions(configPRIO_BITS=3)
+# add_compile_definitions(FREERTOS_PORT=GCC_ARM_CM4F)
+
 # DEPRECATED: FREERTOS_CONFIG_FILE_DIRECTORY - but still supported if no freertos_config defined for now.
 #             May be removed at some point in the future.
 #
@@ -264,9 +286,9 @@ target_link_libraries(freertos_kernel
     PUBLIC
         freertos_kernel_include
         freertos_kernel_port_headers
+        freertos_config
     PRIVATE
         freertos_kernel_port
-
 )
 
 ########################################################################
