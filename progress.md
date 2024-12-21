@@ -127,3 +127,27 @@ cbmc scheduler_harness.c \
 ---
 
 This documentation outlines the project's progress and enhancements, emphasizing modularity, realism, and verification readiness.
+
+## Properties to be verified
+
+1. Memory Safety
+
+```
+File: mem_harness.c
+
+Command to Run:
+
+cbmc mem_harness.c tasks.c list.c \
+    -I "/Users/shivamshekhar/Desktop/FreeRTOS-Kernel/include" \
+    -I "/Users/shivamshekhar/Desktop/FreeRTOS-Kernel/portable/GCC/ARM_CM4F" \
+    -DconfigUSE_IDLE_HOOK=0 \
+    -DconfigUSE_TICK_HOOK=0 \
+    -DconfigMAX_SYSCALL_INTERRUPT_PRIORITY=0 \
+    -DconfigKERNEL_INTERRUPT_PRIORITY=0 \
+    -DconfigPRIO_BITS=3 \
+    -DconfigMAX_PRIORITIES=5 \
+    --function harness --trace
+
+```
+
+2. Idle Task
