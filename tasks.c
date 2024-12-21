@@ -2017,7 +2017,8 @@ static void prvInitialiseNewTask( TaskFunction_t pxTaskCode,
 /*-----------------------------------------------------------*/
 
 #if ( configNUMBER_OF_CORES == 1 )
-
+//!verify if taska are being added to the ready list correctly.
+//!verify if with 0 tasks ,you add a new task, that becomes running. the uxTaskNumber
     static void prvAddNewTaskToReadyList( TCB_t * pxNewTCB )
     {
         /* Ensure interrupts don't access the task lists while the lists are being
@@ -4188,7 +4189,7 @@ TickType_t xTaskGetTickCountFromISR( void )
     return xReturn;
 }
 /*-----------------------------------------------------------*/
-
+//! verifies if ready list is working or not
 UBaseType_t uxTaskGetNumberOfTasks( void )
 {
     traceENTER_uxTaskGetNumberOfTasks();

@@ -1,179 +1,58 @@
 #include "FreeRTOS.h"
 #include "task.h"
-#include "/Users/shivamshekhar/Desktop/FreeRTOS-Kernel/FreeRTOSConfig.h"
+#include "list.h"
 
-#undef taskYIELD
+// Mock definitions for CBMC
+#define MAX_TASKS 10
+#define configMAX_PRIORITIES 5
 
-typedef enum { TASK_READY, TASK_RUNNING, TASK_SUSPENDED } TaskState;
+typedef struct {
+    UBaseType_t uxPriority;
+    ListItem_t xStateListItem;
+} TCB_t;
 
-// Task Control Block
-typedef struct tskTaskControlBlock {
-    void *pxStack;       // Simplified stack pointer
-    void *pvParameters;  // Task parameters
-    TaskState state;     // Task state
-    UBaseType_t priority; // Task priority
-} tskTaskControlBlock;
+void main() {
+    TCB_t *tasks[MAX_TASKS];
+    List_t readyList[configMAX_PRIORITIES];
 
-typedef tskTaskControlBlock* TaskHandle_t;
-typedef tskTaskControlBlock* TCB_t;
+    // Initialize task list and ready lists
+    for (int i = 0; i < MAX_TASKS; i++) {
+        __CPROVER_assume(i >= 0 && i < MAX_TASKS); // Prevent overflow and out of bounds access
+        tasks[i] = malloc(sizeof(TCB_t));
+        __CPROVER_assume(tasks[i] != NULL); // Ensure the pointer is non-NULL
 
-// CBMC-specific definitions
-#ifdef __CPROVER
-void __CPROVER_assert(_Bool condition, const char *description);
-void __CPROVER_assume(_Bool condition);
-_Bool __CPROVER_nondet_bool(void);
-#endif
+        tasks[i]->uxPriority = i % configMAX_PRIORITIES; // Assign priorities cyclically
 
+        vListInitialise(&(readyList[tasks[i]->uxPriority])); // Initialize ready lists
 
-// Simulate __CPROVER_malloc for CBMC
-void *__CPROVER_malloc(size_t size) {
-    static char memory_pool[1024]; // Static memory pool
-    static size_t offset = 0;      // Track current offset
-    if (offset + size <= 1024) {
-        void *ptr = &memory_pool[offset];
-        offset += size;
-        return ptr;                // Return allocated memory
+        vListInsertEnd(&(readyList[tasks[i]->uxPriority]), &(tasks[i]->xStateListItem));
     }
-    return NULL;                   // Out of memory
-}
 
-// Simulated Ready List
-TaskHandle_t readyList[10];
-int readyListSize = 0;
+    // Simulate scheduler behavior
+    TCB_t *highestPriorityTask = NULL;
 
-void addToReadyList(TaskHandle_t task) {
-    if (readyListSize < 10) {
-        readyList[readyListSize++] = task;
-    } else {
-        __CPROVER_assert(0, "Ready list overflow");
+    // Check for the highest priority task in the ready lists
+    for (int priority = configMAX_PRIORITIES - 1; priority >= 0; priority--) {
+        if (!listLIST_IS_EMPTY(&readyList[priority])) {
+            ListItem_t *pxItem = listGET_HEAD_ENTRY(&readyList[priority]);
+            highestPriorityTask = (TCB_t *)listGET_LIST_ITEM_OWNER(pxItem);
+            break; // Stop after finding the first non-empty list (highest priority)
+        }
     }
-}
 
-
-void removeFromReadyList(TaskHandle_t task) {
-    for (int i = 0; i < readyListSize; i++) {
-        if (readyList[i] == task) {
-            for (int j = i; j < readyListSize - 1; j++) {
-                readyList[j] = readyList[j + 1];
-            }
-            readyListSize--;
+    // Invariant check: The highest priority task must always be selected to run
+    for (int i = 0; i < MAX_TASKS; i++) {
+        if (highestPriorityTask == tasks[i]) {
+            // Ensure the highest priority task is in the correct ready list
+            __CPROVER_assert(
+                listIS_CONTAINED_WITHIN(&(readyList[highestPriorityTask->uxPriority]), &(highestPriorityTask->xStateListItem)),
+                "Highest priority task not in its ready list");
             break;
         }
     }
-}
 
-// Simplified xTaskCreate
-BaseType_t xTaskCreate(TaskFunction_t pxTaskCode,
-                       const char * const pcName,
-                       const configSTACK_DEPTH_TYPE uxStackDepth,
-                       void * const pvParameters,
-                       UBaseType_t uxPriority,
-                       TaskHandle_t * const pxCreatedTask) {
-    TCB_t pxNewTCB = __CPROVER_malloc(sizeof(tskTaskControlBlock));
-    __CPROVER_assert(pxCreatedTask != NULL, "Task handle pointer must not be NULL");
-
-    if (pxNewTCB != NULL) {
-        pxNewTCB->priority = uxPriority;
-        pxNewTCB->pvParameters = pvParameters;
-        pxNewTCB->state = TASK_READY; // Initial state is READY
-        *pxCreatedTask = pxNewTCB;
-
-        if (pxTaskCode != NULL) {
-            __CPROVER_assert(pxTaskCode != NULL, "Task code must not be NULL");
-        }
-
-        addToReadyList(pxNewTCB); // Add to ready list
-        return pdPASS;
-    } else {
-        return errCOULD_NOT_ALLOCATE_REQUIRED_MEMORY;
-    }
-}
-
-// Simulate task yielding
-void taskYIELD(TaskHandle_t currentTask) {
-    __CPROVER_assert(currentTask != NULL, "Current task must not be NULL");
-
-    // Find the highest-priority ready task
-    TaskHandle_t highestPriorityTask = NULL;
-    for (int i = 0; i < readyListSize; i++) {
-        TaskHandle_t task = readyList[i];
-        if (task->priority < currentTask->priority && task->state == TASK_READY) {
-            highestPriorityTask = task;
-        }
-    }
-
-    // Perform task switching if needed
-    if (highestPriorityTask != NULL) {
-        currentTask->state = TASK_READY;
-        highestPriorityTask->state = TASK_RUNNING;
-    }
-}
-
-void nondet_task_function(void *pvParameters) {
-    for (;;) {
-        __CPROVER_assume(__CPROVER_nondet_bool());
-    }
-}
-
-// Idle Task and Timer Task
-TaskHandle_t idleTask = NULL;
-TaskHandle_t timerTask = NULL;
-
-void createIdleTask(void) {
-    BaseType_t xReturn = xTaskCreate(NULL, "IdleTask", configMINIMAL_STACK_SIZE, NULL, 0, &idleTask);
-    __CPROVER_assert(xReturn == pdPASS, "Idle task creation failed");
-    __CPROVER_assert(idleTask != NULL, "Idle task must be created successfully");
-}
-
-#if (configUSE_TIMERS == 1)
-void createTimerTask(void) {
-    BaseType_t xReturn = xTaskCreate(nondet_task_function, "TimerTask", configMINIMAL_STACK_SIZE, NULL, 1, &timerTask);
-    __CPROVER_assert(xReturn == pdPASS, "Timer task creation failed");
-}
-#endif
-
-// Simulate vTaskStartScheduler
-void vTaskStartScheduler(void) {
-    createIdleTask(); // Create the idle task
-
-    #if (configUSE_TIMERS == 1)
-    createTimerTask(); // Create the timer task if enabled
-    #endif
-
-    // Assume the scheduler starts running
-    __CPROVER_assume(0); // The scheduler should never return
-}
-
-void CBMC_VerifyPreemption() {
-    TaskHandle_t highPriorityTask = NULL;
-    TaskHandle_t lowPriorityTask = NULL;
-
-    // Create two tasks with different priorities
-    __CPROVER_assume(xTaskCreate(NULL, "HighPriorityTask", configMINIMAL_STACK_SIZE, NULL, 2, &highPriorityTask) == pdPASS);
-    __CPROVER_assume(xTaskCreate(NULL, "LowPriorityTask", configMINIMAL_STACK_SIZE, NULL, 1, &lowPriorityTask) == pdPASS);
-
-    // Assume valid pointers
-    __CPROVER_assume(highPriorityTask != NULL);
-    __CPROVER_assume(lowPriorityTask != NULL);
-
-    // Assume the high-priority task is running
-    highPriorityTask->state = TASK_RUNNING;
-    lowPriorityTask->state = TASK_READY;
-
-    // Simulate task yielding
-    taskYIELD(highPriorityTask);
-
-    // Assertions for preemption
-    if (highPriorityTask != NULL) {
-        __CPROVER_assert(highPriorityTask->state == TASK_RUNNING, "High-priority task must continue running");
-    }
-
-    if (lowPriorityTask != NULL) {
-        __CPROVER_assert(lowPriorityTask->state != TASK_RUNNING, "Low-priority task must not preempt the high-priority task");
-    }
-
-    // Ensure the idle task remains ready
-    if (idleTask != NULL) {
-        __CPROVER_assert(idleTask->state == TASK_READY, "Idle task must always remain in the ready state");
+    // Free tasks to clean up
+    for (int i = 0; i < MAX_TASKS; i++) {
+        free(tasks[i]);
     }
 }

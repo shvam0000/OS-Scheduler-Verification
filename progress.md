@@ -151,3 +151,21 @@ cbmc mem_harness.c tasks.c list.c \
 ```
 
 2. Idle Task
+
+```
+File: scheduler_harness.c
+
+Command to Run:
+
+cbmc scheduler_harness.c tasks.c list.c queue.c \
+    -I "/Users/shivamshekhar/Desktop/FreeRTOS-Kernel/include" \
+    -I "/Users/shivamshekhar/Desktop/FreeRTOS-Kernel/portable/GCC/ARM_CM4F" \
+    -DconfigUSE_IDLE_HOOK=0 \
+    -DconfigUSE_TICK_HOOK=0 \
+    -DconfigMAX_SYSCALL_INTERRUPT_PRIORITY=0 \
+    -DconfigKERNEL_INTERRUPT_PRIORITY=0 \
+    -DconfigPRIO_BITS=3 \
+    -DconfigMAX_PRIORITIES=5 \
+    --function main
+
+```
