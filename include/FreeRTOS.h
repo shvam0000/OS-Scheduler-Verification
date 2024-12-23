@@ -53,6 +53,7 @@
 #define TICK_TYPE_WIDTH_16_BITS    0
 #define TICK_TYPE_WIDTH_32_BITS    1
 #define TICK_TYPE_WIDTH_64_BITS    2
+#define configNUMBER_OF_CORES      1
 
 /* Application specific configuration options. */
 #include "FreeRTOSConfig.h"
@@ -86,9 +87,9 @@
 #endif
 
 /* Set default value of configNUMBER_OF_CORES to 1 to use single core FreeRTOS. */
-#ifndef configNUMBER_OF_CORES
-    #define configNUMBER_OF_CORES    1
-#endif
+// #ifndef configNUMBER_OF_CORES
+//     #define configNUMBER_OF_CORES    1
+// #endif
 
 #ifndef configUSE_MALLOC_FAILED_HOOK
     #define configUSE_MALLOC_FAILED_HOOK    0
